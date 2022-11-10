@@ -298,8 +298,66 @@ for (roi_method in unique(all_data$method)) {
 
 }
 
+pkgcheck(c('tidyr', 'psych', 'stringr'))
+FFA_data <- all_data %>%
+  filter(area == 'FFA') %>%
+  arrange(subID, roi_size, method) %>%
+  mutate(roi_size = ifelse(is.na(roi_size) & method == 'literature based', 'lit. map', roi_size)) %>%
+  select(subID, sex, hand, method, roi_size, value) %>%
+  pivot_wider(names_from = c(method, roi_size), values_from = value) %>%
+  select(subID, sex, hand,
+         `literature based_lit. map`,
+         `group max_6mm`, `group max_8mm`, `group max_10mm`, `group max_12mm`, `group max_14mm`,
+         `individual max_6mm`, `individual max_8mm`, `individual max_10mm`, `individual max_12mm`, `individual max_14mm`,
+         `individual max threshold_6mm`, `individual max threshold_8mm`, `individual max threshold_10mm`, `individual max threshold_12mm`, `individual max threshold_14mm`)
+
+corrs_FFA <- corr.test(
+  select(FFA_data, `literature based_lit. map`:`individual max threshold_14mm`),
+  use = 'pairwise'
+)
+
+corrs_FFA <- corrs_FFA$r
+colnames(corrs_FFA) <- gsub("[ ]|[_]", '.', colnames(corrs_FFA))
+row.names(corrs_FFA) <- gsub("[ ]|[_]", '.', row.names(corrs_FFA))
+
+corrs_FFA <- matrix(
+  corrs_FFA,
+  dimnames = list(
+    t(outer(colnames(corrs_FFA), rownames(corrs_FFA), FUN = paste)), NULL)
+)
+
+corrs_FFA <- corrs_FFA %>%
+  data.frame() %>%
+  tibble::rownames_to_column('method')
+
+colnames(corrs_FFA) <- c('method', 'correlation')
+corrs_FFA <- corrs_FFA %>%
+  separate(col = 'method', into = c('method x', 'method y'), sep = ' ') %>%
+  mutate(`method x` = gsub('[\\.]|[\\.\\.]', ' ',`method x`),
+         `method y` = gsub('[\\.]|[\\.\\.]', ' ',`method y`)) %>%
+  mutate(`method x` = ifelse(`method x` == 'literature based lit map', 'literature based', `method x`),
+         `method y` = ifelse(`method x` == 'literature based lit map', 'literature based', `method y`))
+
+corrs_FFA <- corrs_FFA %>%
+  mutate(`method x` = factor(`method x`, levels = unique(corrs_FFA$`method x`)),
+         `method y` = factor(`method y`, levels = unique(corrs_FFA$`method y`)))
+
+
+ggplot(data = corrs_FFA, aes(x = `method x`, y = `method y`, fill = correlation)) +
+  geom_raster() +
+  viridis::scale_fill_viridis(direction = 1, limits = c(0.5, 1), option = 'A')
+
+
+
+
+
+
+
+
 # -----------------------------------------------------------------------------
 # ***** WIP *****
+
+
 
 
 
