@@ -73,7 +73,7 @@ pkgcheck(c('dplyr', 'ggplot2', 'viridis', 'ggbeeswarm', 'see', 'Hmisc'))
 
 all_data <- read.table('data/all_data.tsv', sep = '\t', header = TRUE)
 
-# 1) plot distribution of LI values accros methods and areas ------------------
+# 2) plot distribution of LI values accros methods and areas ------------------
 
 pn <- position_nudge(x = 0.15)
 # create density plots
@@ -87,7 +87,13 @@ for (roi_method in unique(all_data$method)) {
     height <- 40 /4
   }
 
-  li_plot <- ggplot(filter(all_data, method == roi_method),
+  method_data <- all_data %>%
+    filter(method == roi_method) %>%
+    mutate(roi_size = factor(roi_size,
+                             levels = c('6mm', '8mm', '10mm', '12mm', '14mm')
+    ))
+
+  li_plot <- ggplot(method_data,
                     aes(x = EHI_handedness, y = value,
                         fill = area, color = hand, shape = hand)) +
     annotate("rect",
@@ -143,7 +149,6 @@ for (roi_method in unique(all_data$method)) {
           legend.title = element_text(hjust = 0.5, face = 'bold'),
           panel.spacing = unit(1.0, "lines")) +
     guides(fill = "none",
-           # shape = guide_legend(title.position = "bottom"),
            shape = "none"); li_plot
   ggsave(filename = paste0('results/LI_plot_', roi_method, '_hand.png'),
          plot = li_plot,
@@ -151,61 +156,178 @@ for (roi_method in unique(all_data$method)) {
 
 }
 
+# create density plots
+for (roi_method in unique(all_data$method)) {
 
-# create dot plot showing distribution of LI values by area and participants'
-# characteristics
-int_plot <- ggplot(data = data, 
-                   aes(x = sex, y = value, 
-                       color = hand, shape = sex, fill = hand)) +
-  annotate("rect", xmin = -Inf, xmax = Inf, ymin = -0.2, ymax = 0.2,
-           alpha = .1) +
-  geom_segment(aes(x = -Inf, y = -1, xend = -Inf, yend = 1),
-               color = 'black', linetype = 1, size = 1) +
-  geom_segment(aes(x = 'female', y = -Inf, xend = 'male', yend = -Inf),
-               color = 'black', linetype = 1, size = 1) +
-  geom_segment(aes(x = -Inf, y = 0, xend = Inf, yend = 0),
-               color = 'black', linetype = 3, size = 1) +
-  geom_beeswarm(dodge.width = 1.0, size = 2.0, stroke = 1.0, fill = NA) +
-  stat_summary(fun.data = 'mean_cl_boot', position = position_dodge(0.5),
-               geom = 'linerange',
-               size = 0.8, show.legend = F) +
-  stat_summary(fun.data = 'mean_cl_boot', position = position_dodge(0.5),
-               color = 'black', geom = 'point',
-               size = 2.5, stroke = 1.0, show.legend = F) +
-  facet_wrap(~ area, scales = 'free') +
-  scale_color_manual(values = c("#EF8A62", "#67A9CF")) +
-  scale_fill_manual(values = c("#EF8A62", "#67A9CF")) +
-  scale_shape_manual(values = c(21, 23)) +
-  theme(plot.margin = unit(c(5, 30, 5, 5), 'pt'),
-        panel.background = element_blank(),
-        strip.background = element_blank(),
-        strip.text = element_text(color = 'black', size = 18, face = 'bold'), 
-        plot.title = element_text(color = 'black', size = 18, face = 'bold', 
-                                  hjust = 0),
-        axis.title.x = element_text(color = 'black', size = 16, face = 'bold',
-                                    margin = margin(t = 10)),
-        axis.title.y = element_text(color = 'black', size = 16, face = 'bold',
-                                    margin = margin(r = 10)),
-        axis.text.x = element_text(color = 'black', size = 14),
-        axis.text.y = element_text(color = 'black', size = 14),
-        panel.grid.major.x = element_line(size = 0.5, linetype = 'solid',
-                                          colour = "gray98"),
-        panel.grid.major.y = element_line(size = 0.5, linetype = 'solid',
-                                          colour = "gray98"),
-        panel.grid.minor.y = element_line(size = 0.25, linetype = 'solid',
-                                          colour = "gray98"),
-        legend.text = element_text(color="black", size=rel(1.25)),
-        legend.title = element_blank(),
-        legend.background = element_rect(fill="white"),
-        legend.key = element_blank(),
-        legend.position = "bottom") +
-  labs(y = 'Observed LI-Value', x = '',
-       fill = 'Handedness', color = 'Handedness',
-       shape = 'Sex'); int_plot
-ggsave(filename = './interaction_plot_area_sex_hand.tiff',
-       plot = int_plot, 
-       width = 30, height = 12.5, units = 'cm',
-       dpi = 1200)
+  width <- 25
+  height <- 40
+
+  if (roi_method == 'literature based') {
+    width <- 25
+    height <- 40 /4
+  }
+
+  method_data <- all_data %>%
+    filter(method == roi_method) %>%
+    mutate(roi_size = factor(roi_size,
+                             levels = c('6mm', '8mm', '10mm', '12mm', '14mm')
+    ))
+
+  # create dot plot showing distribution of LI values by area and participants'
+  # characteristics
+  int_plot <- ggplot(data = method_data,
+                     aes(x = sex, y = value,
+                         color = hand, shape = sex, fill = hand)) +
+    annotate("rect", xmin = -Inf, xmax = Inf, ymin = -0.2, ymax = 0.2,
+             alpha = .1) +
+    geom_segment(aes(x = -Inf, y = -1, xend = -Inf, yend = 1),
+                 color = 'black', linetype = 1, size = 1) +
+    geom_segment(aes(x = 'female', y = -Inf, xend = 'male', yend = -Inf),
+                 color = 'black', linetype = 1, size = 1) +
+    geom_segment(aes(x = -Inf, y = 0, xend = Inf, yend = 0),
+                 color = 'black', linetype = 3, size = 1) +
+    geom_beeswarm(dodge.width = 1.0, size = 2.0, stroke = 1.0, fill = NA) +
+    stat_summary(fun.data = 'mean_cl_boot', position = position_dodge(0.5),
+                 geom = 'linerange',
+                 size = 0.8, show.legend = F) +
+    stat_summary(fun.data = 'mean_cl_boot', position = position_dodge(0.5),
+                 color = 'black', geom = 'point',
+                 size = 2.5, stroke = 1.0, show.legend = F) +
+    facet_wrap(roi_size ~ area, scales = 'free', ncol = 3) +
+    scale_color_manual(values = c("#EF8A62", "#67A9CF")) +
+    scale_fill_manual(values = c("#EF8A62", "#67A9CF")) +
+    scale_shape_manual(values = c(21, 23)) +
+    theme(plot.margin = unit(c(5, 30, 5, 5), 'pt'),
+          panel.background = element_blank(),
+          strip.background = element_blank(),
+          strip.text = element_text(color = 'black', size = 18, face = 'bold'),
+          plot.title = element_text(color = 'black', size = 18, face = 'bold',
+                                    hjust = 0),
+          axis.title.x = element_text(color = 'black', size = 16, face = 'bold',
+                                      margin = margin(t = 10)),
+          axis.title.y = element_text(color = 'black', size = 16, face = 'bold',
+                                      margin = margin(r = 10)),
+          axis.text.x = element_text(color = 'black', size = 14),
+          axis.text.y = element_text(color = 'black', size = 14),
+          panel.grid.major.x = element_line(size = 0.5, linetype = 'solid',
+                                            colour = "gray98"),
+          panel.grid.major.y = element_line(size = 0.5, linetype = 'solid',
+                                            colour = "gray98"),
+          panel.grid.minor.y = element_line(size = 0.25, linetype = 'solid',
+                                            colour = "gray98"),
+          legend.text = element_text(color="black", size=rel(1.25)),
+          legend.title = element_blank(),
+          legend.background = element_rect(fill="white"),
+          legend.key = element_blank(),
+          legend.position = "bottom") +
+    labs(title = roi_method,
+         y = 'Observed LI-Value', x = '',
+         fill = 'Handedness', color = 'Handedness',
+         shape = 'Sex'); int_plot
+  ggsave(filename = paste0('results/interaction_plot_', roi_method, '_area_sex_hand.png'),
+         plot = int_plot,
+         width = width, height = height, units = 'cm',
+         dpi = 300)
+
+}
+
+# create line plots
+for (roi_method in unique(all_data$method)) {
+
+  width <- 25
+  height <- 40
+
+  if (roi_method == 'literature based') {
+    next
+  }
+
+  method_data <- all_data %>%
+    filter(method == roi_method) %>%
+    mutate(roi_size = factor(roi_size,
+                             levels = c('6mm', '8mm', '10mm', '12mm', '14mm')
+    )) %>%
+    mutate(sphere_size = as.integer(str_remove(roi_size, '[m][m]')))
+
+  pd <- position_dodge(width = 0.2)
+  size_plot <- ggplot(data = method_data,
+                      aes(x = sphere_size, y = value, color = sex)) +
+    scale_y_continuous(limits = c(-1.0, 1.0), breaks = seq(-1, 1, 0.2)) +
+    scale_x_continuous(limits = c(6, 14), breaks = seq(6, 14, 2)) +
+    geom_point(position = pd, alpha = 0.1, size = 0.5) +
+    geom_line(aes(group = subID), position = pd, alpha = 0.1, size = 0.5) +
+    facet_wrap(~ area + hand, scales = 'free', ncol = 2) +
+    stat_summary(fun = mean, geom = 'point') +
+    stat_summary(fun = mean, geom = 'line') +
+    stat_summary(fun.data = 'mean_cl_boot', B = 5000,
+                 geom = 'ribbon', aes(fill = sex), alpha = 0.2, color = NA) +
+    geom_segment(aes(x = -Inf, y = -1.0, xend = -Inf, yend = 1.0),
+                 color = 'black', size = rel(1.0), linetype = 1) +
+    geom_segment(aes(x = 6, y = -Inf, xend = 14, yend = -Inf),
+                 color = 'black', size = rel(1.0), linetype = 1) +
+    theme(plot.margin = unit(c(5, 30, 5, 5), 'pt'),
+          panel.background = element_blank(),
+          strip.background = element_blank(),
+          strip.text = element_text(color = 'black', size = 16, face = 'bold'),
+          plot.title = element_text(color = 'black', size = 18, face = 'bold',
+                                    hjust = 0.5),
+          axis.title.x = element_text(color = 'black', size = 16, face = 'bold',
+                                      margin = margin(t = 10)),
+          axis.title.y = element_text(color = 'black', size = 16, face = 'bold',
+                                      margin = margin(r = 10)),
+          axis.text.x = element_text(color = 'black', size = 14),
+          axis.text.y = element_text(color = 'black', size = 14),
+          panel.grid.major.x = element_line(size = 0.5, linetype = 'solid',
+                                            colour = "gray98"),
+          panel.grid.major.y = element_line(size = 0.5, linetype = 'solid',
+                                            colour = "gray98"),
+          panel.grid.minor.y = element_line(size = 0.25, linetype = 'solid',
+                                            colour = "gray98"),
+          legend.text = element_text(color="black", size=rel(1.25)),
+          legend.title = element_blank(),
+          legend.background = element_rect(fill="white"),
+          legend.key = element_blank(),
+          legend.position = "bottom") +
+    labs(title = tools::toTitleCase(roi_method),
+         y = 'Observed LI-Value', x = '',
+         fill = 'Handedness', color = 'Handedness',
+         shape = 'Sex'); size_plot
+  ggsave(filename = paste0('results/size_plot_', roi_method, '.png'),
+         plot = size_plot,
+         width = 20, height = 30, units = 'cm',
+         dpi = 300)
+
+}
+
+# -----------------------------------------------------------------------------
+# ***** WIP *****
+
+
+
+
+
+
+# 3 model LI as a function of group and roi size ------------------------------
+pkgcheck(c('stringr', 'lme4', 'lmerTest' ,'performance'))
+
+data_methods <- all_data %>%
+  filter(method %in% c('group max', 'individual max', 'individual max threshold')) %>%
+  mutate(method = factor(method),
+         sphere_size = as.integer(str_remove(roi_size, '[m][m]'))) %>%
+  mutate(sphere_size_c = sphere_size - mean(sphere_size))
+
+# overall model
+mod_li <- lmer(data = data_methods,
+               value ~ age_c + sex + hand +
+                 sphere_size_c+ method +
+                 area +
+                 (1 | subID),
+               contrasts = list(area = 'contr.sum',
+                                sex = 'contr.sum',
+                                hand = 'contr.sum',
+                                method = 'contr.sum'))
+anova(mod_li)
+check_model(mod_li)
+model_performance(mod_li)
 
 # check if lateralisation patterns are consistent across subject
 data <- data %>% 
@@ -217,7 +339,7 @@ data <- data %>%
   right_join(., data, 'subID')
 
 # plot subjects by sex and handedness
-pd = position_dodge(0.2)
+pd <- position_dodge(0.2)
 subj_plot <- ggplot(data = filter(data, !is.na(lat)), 
                     aes(x = area,
                         y = value, group = subID, 
@@ -269,7 +391,7 @@ ggsave(filename = './indiv_differences_lateralisation.tiff',
        dpi = 1200)
 
 # plot subjects by lateralisation of the OFA
-pd = position_dodge(0.2)
+pd <- position_dodge(0.2)
 lat_plot <- ggplot(data = filter(data, !is.na(lat)), 
                    aes(x = area,
                        y = value, group = subID, 

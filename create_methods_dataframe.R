@@ -39,7 +39,6 @@ group_max <- setNames(
          read.table,
          sep = ',',
          header = T,
-         na.strings = 9999.0000
   ),
   group_max_paths)
 
@@ -49,7 +48,7 @@ indiv_max <- setNames(
          read.table,
          sep = ',',
          header = T,
-         na.strings = 9999.0000),
+  ),
   indiv_max_paths
 )
 
@@ -59,7 +58,7 @@ indiv_max_t <- setNames(
          read.table,
          sep = ',',
          header = T,
-         na.strings = 9999.0000),
+  ),
   indiv_max_threshold_paths
 )
 
@@ -69,7 +68,7 @@ lit_coord <- setNames(
          read.table,
          sep = ';',
          header = T,
-         na.strings = 9999.0000),
+  ),
   lit_coord_paths)
 
 # row bind the data frames
@@ -112,12 +111,13 @@ all_data <- all_data %>%
 all_data$area <- gsub(all_data$area, pattern = '_LI_wm', replacement = '')
 all_data$area <- factor(all_data$area, levels = c('OFA', 'FFA', 'STS'))
 
+# remove missing values (i,e., LI values == 9999 | 9999.9999)
+all_data[abs(all_data$value) > 1.0, ]$value <- NA
+
 # li-values should be positive for gamma model
 all_data <- all_data %>%
   mutate(li_positive = (value + 1)) %>%
-  mutate(roi_size = factor(roi_size,
-                           levels = c(NA, '6mm', '8mm', '10mm', '12mm', '14mm')
-  ))
+  mutate(roi_size = factor(roi_size))
 
 # save
 write.table(all_data, file = 'data/all_data.tsv', sep = '\t', row.names = FALSE)
