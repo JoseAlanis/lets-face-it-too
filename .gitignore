@@ -1,0 +1,6 @@
+# jetbrains
+/.idea/**
+
+# data directories
+/data/
+/osfstorage-archive/
