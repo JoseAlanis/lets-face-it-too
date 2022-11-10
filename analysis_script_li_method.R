@@ -344,7 +344,7 @@ corrs_FFA <- corrs_FFA %>%
 
 
 ggplot(data = corrs_FFA, aes(x = `method x`, y = `method y`, fill = correlation)) +
-  geom_raster() +
+  geom_tile(color='white') +
   viridis::scale_fill_viridis(direction = 1, limits = c(0.5, 1), option = 'A')
 
 
