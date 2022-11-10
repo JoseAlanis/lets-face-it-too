@@ -1,9 +1,10 @@
-# Title     : Let's face it: Lateralization of the face perception 
-# Objective : Test effect of handedness on lateralization score
-# Target    : Voxel Value on Conjunction Faces vs Houses, Faces vs Scrambled
+# Title     : Let's face it too: Lateralization of the face perception 2.0
+# Objective : Analysis of variance explainded by method of choice for
+#             quantifiying the Lateralisation Index (LI)
+# Target    : LI accross multiple brain areas
 # Created by: jose c. garcia alanis
-# Created on: 2022-02-01
-# R version : R version 4.1.2 (2021-11-01)
+# Created on: 2022-11-10
+# R version : R version 4.2.1 (2022-06-23)
 
 # set working directory
 path <- dirname(rstudioapi::getActiveDocumentContext()$path)
@@ -65,102 +66,14 @@ apa <- function(x, title = " ", stub = T) {
     opt_align_table_header(align = "left")
 }
 
-
-# 1) get the data --------------------------------------------------------------
-pkgcheck(c('dplyr', 'tidyr', 'stringr'))
-
-# get file paths
-group_max_paths <- Sys.glob('osfstorage-archive/group-max/*.csv')
-indiv_max_paths <- Sys.glob('osfstorage-archive/individual-max/*.csv')
-indiv_max_threshold_paths <- Sys.glob('osfstorage-archive/individual-max-threshold/*.csv')
-lit_coord_paths <- Sys.glob('osfstorage-archive/literature-coordinates/*.csv')
-
-# read in group-max files
-group_max <- setNames(
-  lapply(group_max_paths,
-         read.table,
-         sep = ',',
-         header = T,
-         na.strings = 9999.0000
-  ),
-  group_max_paths)
-
-# read in individual-max files
-indiv_max <- setNames(
-  lapply(indiv_max_paths,
-         read.table,
-         sep = ',',
-         header = T,
-         na.strings = 9999.0000),
-  indiv_max_paths
-)
-
-# read in individual-max (threshold) files
-indiv_max_t <- setNames(
-  lapply(indiv_max_threshold_paths,
-         read.table,
-         sep = ',',
-         header = T,
-         na.strings = 9999.0000),
-  indiv_max_threshold_paths
-)
-
-# read in literature coordinate files
-lit_coord <- setNames(
-  lapply(lit_coord_paths,
-         read.table,
-         sep = ';',
-         header = T,
-         na.strings = 9999.0000),
-  lit_coord_paths)
-
-# row bind the data frames
-group_max_df <- bind_rows(group_max, .id = 'file') %>%
-  mutate(method = 'group max')
-indiv_max_df <- bind_rows(indiv_max, .id = 'file') %>%
-  mutate(method = 'individual max')
-indiv_max_t_df <- bind_rows(indiv_max_t, .id = 'file') %>%
-  mutate(method = 'individual max threshold')
-lit_coord_df <- bind_rows(lit_coord, .id = 'file') %>%
-  mutate(method = 'literature based')
-
-# row bind dataframes
-all_data <- bind_rows(
-  list(group_max_df, indiv_max_df, indiv_max_t_df, lit_coord_df)
-)
-
-# drop `notes` column
-all_data <- all_data %>%
-  mutate(roi_size = str_extract(file, pattern = '[0-9]mm|[0-9][0-9]mm')) %>%
-  select(!notes, !file)
-
-# 2) prepare demographic data for modelling ------------------------------------
-
-# categorical variables to factors, mean-center continuous variables
-all_data <- all_data %>%
-  mutate(sex = ifelse(sex == 1, 'female', 'male'),
-         hand = ifelse(EHI_handedness == 1, 'right handed', 'left handed'),
-         age_c = age - mean(age)) %>%
-  mutate(sex = factor(sex),
-         hand = factor(hand))
-
-# select relevant columns
-all_data <- all_data %>%
-  select(subID, FFA_LI_wm:STS_LI_wm,
-         sex, age_c, hand, EHI_handedness, method, roi_size) %>%
-  gather(area, value, FFA_LI_wm:STS_LI_wm)
-
-# remove suffix '_LI_wm' from variable area
-all_data$area <- gsub(all_data$area, pattern = '_LI_wm', replacement = '')
-all_data$area <- factor(all_data$area, levels = c('OFA', 'FFA', 'STS'))
-
-# li-values should be positive for gamma model
-all_data <- all_data %>%
-  mutate(li_positive = (value + 1)) %>%
-  mutate(roi_size = factor(roi_size, levels = c('6mm', '8mm', '10mm', '12mm', '14mm')))
-
-# 3) plot distribution of LI-values --------------------------------------------
 pkgcheck(c('dplyr', 'ggplot2', 'viridis', 'ggbeeswarm', 'see', 'Hmisc'))
+
+
+# 1) get the data -------------------------------------------------------------
+
+all_data <- read.table('data/all_data.tsv', sep = '\t', header = TRUE)
+
+# 1) plot distribution of LI values accros methods and areas ------------------
 
 pn <- position_nudge(x = 0.15)
 # create density plots
@@ -232,7 +145,7 @@ for (roi_method in unique(all_data$method)) {
     guides(fill = "none",
            # shape = guide_legend(title.position = "bottom"),
            shape = "none"); li_plot
-  ggsave(filename = paste0('./LI_plot_', roi_method, '_hand.png'),
+  ggsave(filename = paste0('results/LI_plot_', roi_method, '_hand.png'),
          plot = li_plot,
          width = width, height = height,  units = 'cm', dpi = 300)
 
