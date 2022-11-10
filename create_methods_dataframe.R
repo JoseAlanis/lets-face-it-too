@@ -115,7 +115,9 @@ all_data$area <- factor(all_data$area, levels = c('OFA', 'FFA', 'STS'))
 # li-values should be positive for gamma model
 all_data <- all_data %>%
   mutate(li_positive = (value + 1)) %>%
-  mutate(roi_size = factor(roi_size, levels = c('6mm', '8mm', '10mm', '12mm', '14mm')))
+  mutate(roi_size = factor(roi_size,
+                           levels = c(NA, '6mm', '8mm', '10mm', '12mm', '14mm')
+  ))
 
 # save
 write.table(all_data, file = 'data/all_data.tsv', sep = '\t', row.names = FALSE)
