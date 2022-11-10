@@ -10,18 +10,18 @@ path <- dirname(rstudioapi::getActiveDocumentContext()$path)
 setwd(path)
 
 # function for installing and loading packages
-pkgcheck <- function( packs ) {
-  
+pkgcheck <- function(packs) {
+
   # Check which packages are not installed
-  if ( sum(!packs %in% installed.packages()[, 'Package'])) {
+  if (sum(!packs %in% installed.packages()[, 'Package'])) {
     # install them
-    install.packages( packs[ which(!packs %in% installed.packages()[, 'Package']) ], 
-                      dependencies = T)
+    install.packages(packs[which(!packs %in% installed.packages()[, 'Package'])],
+                     dependencies = T)
   }
-  
+
   # load all packages
-  sapply(packs, require, character.only =  T)
-  
+  sapply(packs, require, character.only = T)
+
 }
 
 apa <- function(x, title = " ", stub = T) {
