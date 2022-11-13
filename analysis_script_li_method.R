@@ -66,17 +66,18 @@ apa <- function(x, title = " ", stub = T) {
     opt_align_table_header(align = "left")
 }
 
-pkgcheck(c('dplyr', 'ggplot2', 'viridis', 'ggbeeswarm', 'see', 'Hmisc'))
-
-
 # 1) get the data -------------------------------------------------------------
 
 all_data <- read.table('data/all_data.tsv', sep = '\t', header = TRUE)
 
 # 2) plot distribution of LI values accros methods and areas ------------------
+pkgcheck(c('dplyr', 'stringr',
+           'ggplot2', 'viridis', 'ggbeeswarm', 'see', 'Hmisc'))
 
+# position settings
 pn <- position_nudge(x = 0.15)
-# create density plots
+
+# *** create LI density plots ***
 for (roi_method in unique(all_data$method)) {
 
   width <- 20
@@ -156,7 +157,7 @@ for (roi_method in unique(all_data$method)) {
 
 }
 
-# create density plots
+# *** create LI plots by brain area and participant's sex and age ***
 for (roi_method in unique(all_data$method)) {
 
   width <- 25
@@ -231,7 +232,7 @@ for (roi_method in unique(all_data$method)) {
 
 }
 
-# create line plots
+# *** create line plots showing effect of roi size on the LI ***
 for (roi_method in unique(all_data$method)) {
 
   width <- 25
@@ -298,11 +299,17 @@ for (roi_method in unique(all_data$method)) {
 
 }
 
-pkgcheck(c('tidyr', 'psych', 'stringr'))
+# 3) plot distribution of LI values accros methods and areas ------------------
+pkgcheck(c('tidyr', 'stringr'))
+
 FFA_data <- all_data %>%
   filter(area == 'FFA') %>%
   arrange(subID, roi_size, method) %>%
-  mutate(roi_size = ifelse(is.na(roi_size) & method == 'literature based', 'lit. map', roi_size)) %>%
+  mutate(roi_size =
+           ifelse(is.na(roi_size) & method == 'literature based',
+                  'lit. map',
+                  roi_size)
+  ) %>%
   select(subID, sex, hand, method, roi_size, value) %>%
   pivot_wider(names_from = c(method, roi_size), values_from = value) %>%
   select(subID, sex, hand,
@@ -311,12 +318,14 @@ FFA_data <- all_data %>%
          `individual max_6mm`, `individual max_8mm`, `individual max_10mm`, `individual max_12mm`, `individual max_14mm`,
          `individual max threshold_6mm`, `individual max threshold_8mm`, `individual max threshold_10mm`, `individual max threshold_12mm`, `individual max threshold_14mm`)
 
+pkgcheck('psych')
 corrs_FFA <- corr.test(
   select(FFA_data, `literature based_lit. map`:`individual max threshold_14mm`),
   use = 'pairwise'
 )
 
 corrs_FFA <- corrs_FFA$r
+corrs_FFA[upper.tri(corrs_FFA)] <- NA
 colnames(corrs_FFA) <- gsub("[ ]|[_]", '.', colnames(corrs_FFA))
 row.names(corrs_FFA) <- gsub("[ ]|[_]", '.', row.names(corrs_FFA))
 
@@ -335,17 +344,38 @@ corrs_FFA <- corrs_FFA %>%
   separate(col = 'method', into = c('method x', 'method y'), sep = ' ') %>%
   mutate(`method x` = gsub('[\\.]|[\\.\\.]', ' ',`method x`),
          `method y` = gsub('[\\.]|[\\.\\.]', ' ',`method y`)) %>%
-  mutate(`method x` = ifelse(`method x` == 'literature based lit map', 'literature based', `method x`),
-         `method y` = ifelse(`method x` == 'literature based lit map', 'literature based', `method y`))
+  mutate(`method x` = ifelse(`method x` == 'literature based lit  map', 'literature based', `method x`),
+         `method y` = ifelse(`method y` == 'literature based lit  map', 'literature based', `method y`))
 
 corrs_FFA <- corrs_FFA %>%
-  mutate(`method x` = factor(`method x`, levels = unique(corrs_FFA$`method x`)),
-         `method y` = factor(`method y`, levels = unique(corrs_FFA$`method y`)))
+  mutate(`method x` = factor(`method x`, levels = unique(corrs_FFA$`method x`),
+                             labels = c('(1)', '(2)', '(3)', '(4)', '(5)', '(6)', '(7)', '(8)', '(9)',
+                                        '(10)', '(11)', '(12)', '(13)', '(14)', '(15)', '(16)')),
+         `method y` = factor(`method y`, levels = rev(unique(corrs_FFA$`method y`)),
+                             labels = rev(c('LB (1)',
+                                            'GM 6mm (2)', 'GM 8mm (3)', 'GM 10mm (4)', 'GM 12mm (5)', 'GM 14mm (6)',
+                                            'IM 6mm (7)', 'IM 8mm (8)', 'IM 10mm (9)', 'IM 12mm (10)', 'IM 14mm (11)',
+                                            'IMT 6mm (12)', 'IMT 8mm (13)', 'IMT 10mm (14)', 'IMT 12mm (15)', 'IMT 14mm (16)'))))
 
+
+require(RColorBrewer)
+# Define the number of colors you want
+nb.cols <- 8
+mycolors <- colorRampPalette(brewer.pal(8, "Reds"))(nb.cols)
 
 ggplot(data = corrs_FFA, aes(x = `method x`, y = `method y`, fill = correlation)) +
-  geom_tile(color='white') +
-  viridis::scale_fill_viridis(direction = 1, limits = c(0.5, 1), option = 'A')
+  geom_tile(color='white', alpha = 0.90) +
+  geom_text(aes(label = round(correlation, 2)), size = 2.5, fontface = 'bold') +
+  scale_fill_gradientn(colors = mycolors, na.value = 'white') +
+  geom_segment(aes(x = 1.5, y = 0.5, xend = 1.5, yend = 16.5),
+               color = 'black', size = 0.4, linetype = 1) +
+  geom_segment(aes(x = 6.5, y = 0.5, xend = 6.5, yend = 11.5),
+               color = 'black', size = 0.4, linetype = 1) +
+  geom_segment(aes(x = 11.5, y = 0.5, xend = 11.5, yend = 6.5),
+               color = 'black', size = 0.4, linetype = 1) +
+  theme(panel.grid.major.x = element_blank(),
+        legend.position = 'None',
+        axis.title.x = element_blank())
 
 
 
