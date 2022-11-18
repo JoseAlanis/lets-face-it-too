@@ -300,82 +300,100 @@ for (roi_method in unique(all_data$method)) {
 }
 
 # 3) plot distribution of LI values accros methods and areas ------------------
-pkgcheck(c('tidyr', 'stringr'))
+pkgcheck(c('tidyr', 'stringr', 'RColorBrewer', 'psych'))
 
-FFA_data <- all_data %>%
-  filter(area == 'FFA') %>%
-  arrange(subID, roi_size, method) %>%
-  mutate(roi_size =
-           ifelse(is.na(roi_size) & method == 'literature based',
-                  'lit. map',
-                  roi_size)
-  ) %>%
-  select(subID, sex, hand, method, roi_size, value) %>%
-  pivot_wider(names_from = c(method, roi_size), values_from = value) %>%
-  select(subID, sex, hand,
-         `literature based_lit. map`,
-         `group max_6mm`, `group max_8mm`, `group max_10mm`, `group max_12mm`, `group max_14mm`,
-         `individual max_6mm`, `individual max_8mm`, `individual max_10mm`, `individual max_12mm`, `individual max_14mm`,
-         `individual max threshold_6mm`, `individual max threshold_8mm`, `individual max threshold_10mm`, `individual max threshold_12mm`, `individual max threshold_14mm`)
+colors <- data.frame(area = c('FFA', 'OFA', 'STS'),
+                     colors = c('Reds', 'Blues', 'Greens'))
 
-pkgcheck('psych')
-corrs_FFA <- corr.test(
-  select(FFA_data, `literature based_lit. map`:`individual max threshold_14mm`),
-  use = 'pairwise'
-)
+for (brain_area in unique(all_data$area)) {
 
-corrs_FFA <- corrs_FFA$r
-corrs_FFA[upper.tri(corrs_FFA)] <- NA
-colnames(corrs_FFA) <- gsub("[ ]|[_]", '.', colnames(corrs_FFA))
-row.names(corrs_FFA) <- gsub("[ ]|[_]", '.', row.names(corrs_FFA))
+  # Define the number of colors you want
+  nb.cols <- 8
+  mycolors <- colorRampPalette(brewer.pal(
+    n = 8,
+    name = colors[colors$area == brain_area, 'colors']))(nb.cols)
 
-corrs_FFA <- matrix(
-  corrs_FFA,
-  dimnames = list(
-    t(outer(colnames(corrs_FFA), rownames(corrs_FFA), FUN = paste)), NULL)
-)
+  area_data <- all_data %>%
+    filter(area == brain_area) %>%
+    arrange(subID, roi_size, method) %>%
+    mutate(roi_size =
+             ifelse(is.na(roi_size) & method == 'literature based',
+                    'lit. map',
+                    roi_size)
+    ) %>%
+    select(subID, sex, hand, method, roi_size, value) %>%
+    pivot_wider(names_from = c(method, roi_size), values_from = value) %>%
+    select(subID, sex, hand,
+           `literature based_lit. map`,
+           `group max_6mm`, `group max_8mm`, `group max_10mm`, `group max_12mm`, `group max_14mm`,
+           `individual max_6mm`, `individual max_8mm`, `individual max_10mm`, `individual max_12mm`, `individual max_14mm`,
+           `individual max threshold_6mm`, `individual max threshold_8mm`, `individual max threshold_10mm`, `individual max threshold_12mm`, `individual max threshold_14mm`)
 
-corrs_FFA <- corrs_FFA %>%
-  data.frame() %>%
-  tibble::rownames_to_column('method')
+  corrs_area <- corr.test(
+    select(area_data, `literature based_lit. map`:`individual max threshold_14mm`),
+    use = 'pairwise'
+  )
 
-colnames(corrs_FFA) <- c('method', 'correlation')
-corrs_FFA <- corrs_FFA %>%
-  separate(col = 'method', into = c('method x', 'method y'), sep = ' ') %>%
-  mutate(`method x` = gsub('[\\.]|[\\.\\.]', ' ',`method x`),
-         `method y` = gsub('[\\.]|[\\.\\.]', ' ',`method y`)) %>%
-  mutate(`method x` = ifelse(`method x` == 'literature based lit  map', 'literature based', `method x`),
-         `method y` = ifelse(`method y` == 'literature based lit  map', 'literature based', `method y`))
+  corrs_area <- corrs_area$r
+  corrs_area[upper.tri(corrs_area)] <- NA
+  colnames(corrs_area) <- gsub("[ ]|[_]", '.', colnames(corrs_area))
+  row.names(corrs_area) <- gsub("[ ]|[_]", '.', row.names(corrs_area))
 
-corrs_FFA <- corrs_FFA %>%
-  mutate(`method x` = factor(`method x`, levels = unique(corrs_FFA$`method x`),
-                             labels = c('(1)', '(2)', '(3)', '(4)', '(5)', '(6)', '(7)', '(8)', '(9)',
-                                        '(10)', '(11)', '(12)', '(13)', '(14)', '(15)', '(16)')),
-         `method y` = factor(`method y`, levels = rev(unique(corrs_FFA$`method y`)),
-                             labels = rev(c('LB (1)',
-                                            'GM 6mm (2)', 'GM 8mm (3)', 'GM 10mm (4)', 'GM 12mm (5)', 'GM 14mm (6)',
-                                            'IM 6mm (7)', 'IM 8mm (8)', 'IM 10mm (9)', 'IM 12mm (10)', 'IM 14mm (11)',
-                                            'IMT 6mm (12)', 'IMT 8mm (13)', 'IMT 10mm (14)', 'IMT 12mm (15)', 'IMT 14mm (16)'))))
+  corrs_area <-
+    matrix(
+      corrs_area,
+      dimnames = list(t(outer(colnames(corrs_area), rownames(corrs_area), FUN = paste)), NULL)
+    )
 
+  corrs_area <- corrs_area %>%
+    data.frame() %>%
+    tibble::rownames_to_column('method')
 
-require(RColorBrewer)
-# Define the number of colors you want
-nb.cols <- 8
-mycolors <- colorRampPalette(brewer.pal(8, "Reds"))(nb.cols)
+  colnames(corrs_area) <- c('method', 'correlation')
+  corrs_area <- corrs_area %>%
+    separate(col = 'method', into = c('method x', 'method y'), sep = ' ') %>%
+    mutate(`method x` = gsub('[\\.]|[\\.\\.]', ' ',`method x`),
+           `method y` = gsub('[\\.]|[\\.\\.]', ' ',`method y`)) %>%
+    mutate(`method x` = ifelse(`method x` == 'literature based lit  map', 'literature based', `method x`),
+           `method y` = ifelse(`method y` == 'literature based lit  map', 'literature based', `method y`))
 
-ggplot(data = corrs_FFA, aes(x = `method x`, y = `method y`, fill = correlation)) +
-  geom_tile(color='white', alpha = 0.90) +
-  geom_text(aes(label = round(correlation, 2)), size = 2.5, fontface = 'bold') +
-  scale_fill_gradientn(colors = mycolors, na.value = 'white') +
-  geom_segment(aes(x = 1.5, y = 0.5, xend = 1.5, yend = 16.5),
-               color = 'black', size = 0.4, linetype = 1) +
-  geom_segment(aes(x = 6.5, y = 0.5, xend = 6.5, yend = 11.5),
-               color = 'black', size = 0.4, linetype = 1) +
-  geom_segment(aes(x = 11.5, y = 0.5, xend = 11.5, yend = 6.5),
-               color = 'black', size = 0.4, linetype = 1) +
-  theme(panel.grid.major.x = element_blank(),
-        legend.position = 'None',
-        axis.title.x = element_blank())
+  corrs_area <- corrs_area %>%
+    mutate(`method x` = factor(`method x`, levels = unique(corrs_area$`method x`),
+                               labels = c('(1)', '(2)', '(3)', '(4)', '(5)', '(6)', '(7)', '(8)', '(9)',
+                                          '(10)', '(11)', '(12)', '(13)', '(14)', '(15)', '(16)')),
+           `method y` = factor(`method y`, levels = rev(unique(corrs_area$`method y`)),
+                               labels = rev(c('LB (1)',
+                                              'GM 6mm (2)', 'GM 8mm (3)', 'GM 10mm (4)', 'GM 12mm (5)', 'GM 14mm (6)',
+                                              'IM 6mm (7)', 'IM 8mm (8)', 'IM 10mm (9)', 'IM 12mm (10)', 'IM 14mm (11)',
+                                              'IMT 6mm (12)', 'IMT 8mm (13)', 'IMT 10mm (14)', 'IMT 12mm (15)', 'IMT 14mm (16)'))))
+
+  validity_plot <- ggplot(data = corrs_area, aes(x = `method x`, y = `method y`, fill = correlation)) +
+    geom_tile(color='white', alpha = 0.85) +
+    geom_text(aes(label = ifelse(!is.na(correlation), format(round(correlation, 2), nsmall = 2), NA)),
+              size = 2.5, fontface = 'bold') +
+    scale_fill_gradientn(colors = mycolors, na.value = 'white',
+                          limits = c(floor(min(corrs_area$correlation) * 10) / 10, 1.0)) +
+    geom_segment(aes(x = 1.5, y = 0.5, xend = 1.5, yend = 16.5),
+                 color = 'black', size = 0.4, linetype = 1) +
+    geom_segment(aes(x = 6.5, y = 0.5, xend = 6.5, yend = 11.5),
+                 color = 'black', size = 0.4, linetype = 1) +
+    geom_segment(aes(x = 11.5, y = 0.5, xend = 11.5, yend = 6.5),
+                 color = 'black', size = 0.4, linetype = 1) +
+    labs(title = brain_area,
+         y = 'Method and Roi Size') +
+    theme(panel.grid.major.x = element_blank(),
+          panel.background = element_blank(),
+          legend.position = 'None',
+          plot.title = element_text(hjust = 0.5),
+          axis.title.x = element_blank(),
+          axis.text = element_text(color = 'black')) ; validity_plot
+
+  ggsave(filename = paste0('results/', brain_area, '_convergent_validity_plot.png'),
+         plot = validity_plot,
+         width = 20, height = 12, units = 'cm',
+         dpi = 300)
+}
+
 
 
 
